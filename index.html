@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DZD Professional Admin | Terminal</title>
+    <title>DZD Professional Admin | Explorer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
@@ -16,190 +17,373 @@
             background-color: #050810; 
             background-image: radial-gradient(circle at top right, #1e293b 0%, #050810 40%);
             background-attachment: fixed;
+            display: none; /* Hide until password check */
         }
         .glass { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
-        .stat-card { background: linear-gradient(135deg, rgba(30,41,59,0.5) 0%, rgba(15,23,42,0.8) 100%); border: 1px solid rgba(59,130,246,0.2); }
+        .custom-scrollbar::-webkit-scrollbar { height: 4px; width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .modal-active { opacity: 1 !important; pointer-events: auto !important; transform: scale(1) !important; }
-        .hidden-content { display: none; }
+        
+        /* Auth Overlay */
+        #auth-overlay {
+            position: fixed; inset: 0; z-index: 9999; background: #050810;
+            display: flex; align-items: center; justify-content: center;
+        }
     </style>
 </head>
 <body class="text-slate-200 p-4 md:p-8 min-h-screen">
 
-    <div id="login-overlay" class="fixed inset-0 z-[1000] bg-black flex items-center justify-center p-6">
-        <div class="glass p-8 rounded-[2rem] w-full max-w-md text-center border-blue-500/30">
-            <i class="fas fa-lock text-4xl text-blue-500 mb-4"></i>
-            <h2 class="text-2xl font-black mb-2">DZD TERMINAL ACCESS</h2>
-            <p class="text-slate-500 text-xs mb-6 uppercase tracking-widest">Enter Administrative Password</p>
-            <input type="password" id="admin-pass" class="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-center text-xl mb-4 outline-none focus:border-blue-500" placeholder="••••••••">
-            <button onclick="checkAuth()" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-bold transition-all">UNSEAL ACCESS</button>
+    <div id="auth-overlay">
+        <div class="glass p-8 rounded-[2.5rem] w-full max-w-sm text-center">
+            <i class="fas fa-lock text-blue-500 text-3xl mb-4"></i>
+            <h2 class="text-xl font-bold mb-4">DZD ADMIN ACCESS</h2>
+            <input type="password" id="admin-password" placeholder="Enter Password" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-center mb-4 outline-none">
+            <button onclick="checkPassword()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold uppercase transition-all">Verify</button>
             <p id="auth-error" class="text-red-500 text-[10px] mt-4 font-bold uppercase"></p>
         </div>
     </div>
 
-    <div id="main-interface" class="hidden-content">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-            <div class="stat-card p-6 rounded-[2rem] relative overflow-hidden group">
-                <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all"></div>
-                <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Lifetime Orders</p>
-                <h3 id="stat-total-orders" class="text-3xl font-black text-white">0</h3>
+    <audio id="bg-audio" loop autoplay hidden>
+        <source src="https://github.com/Akashkavindu/ZANTA_MD/raw/main/images/Edward%20Maya%20and%20Vika%20Jigulina%20-%20Stereo%20Love%20(Karaoke%20Version).mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="reject-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+        <div class="glass p-8 rounded-[2.5rem] w-full max-w-md scale-90 transition-all duration-300">
+            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i class="fas fa-exclamation-triangle text-red-500"></i> REJECTION REASON</h3>
+            <select id="reject-reason-select" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-sm text-white mb-6 outline-none">
+                <option value="Invalid Receipt Image">Invalid Receipt Image</option>
+                <option value="Amount Mismatch">Amount Mismatch</option>
+                <option value="Duplicate Submission">Duplicate Submission</option>
+                <option value="Fake Receipt Detected">Fake Receipt Detected</option>
+            </select>
+            <div class="flex gap-3">
+                <button onclick="closeModals()" class="flex-1 px-6 py-3 rounded-xl hover:bg-white/5 transition-all text-xs font-bold uppercase">Cancel</button>
+                <button id="confirm-reject-btn" class="flex-1 bg-red-600 hover:bg-red-500 px-6 py-3 rounded-xl text-white text-xs font-bold uppercase transition-all">Confirm Reject</button>
             </div>
-            <div class="stat-card p-6 rounded-[2rem] relative overflow-hidden group">
-                <div class="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all"></div>
-                <p class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Total Revenue</p>
-                <h3 id="stat-total-revenue" class="text-3xl font-black text-white">LKR 0</h3>
+        </div>
+    </div>
+
+    <div id="approve-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+        <div class="glass p-8 rounded-[2.5rem] w-full max-w-md scale-90 transition-all duration-300">
+            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i class="fas fa-check-circle text-blue-500"></i> APPROVE DEPOSIT</h3>
+            <div class="mb-6">
+                <label class="text-[10px] text-slate-500 font-bold uppercase mb-2 block">Final Amount (LKR)</label>
+                <input type="number" id="approve-amount-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-xl font-bold text-emerald-400 outline-none">
             </div>
-            <div class="stat-card p-6 rounded-[2rem] relative overflow-hidden group border-amber-500/20">
-                <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all"></div>
-                <p class="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-1">Est. Profit (60%)</p>
-                <h3 id="stat-total-profit" class="text-3xl font-black text-white">LKR 0</h3>
+            <div class="flex gap-3">
+                <button onclick="closeModals()" class="flex-1 px-6 py-3 rounded-xl hover:bg-white/5 transition-all text-xs font-bold uppercase">Cancel</button>
+                <button id="confirm-approve-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl text-white text-xs font-bold uppercase transition-all">Confirm Approve</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="wallet-edit-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+        <div class="glass p-8 rounded-[2.5rem] w-full max-w-md scale-90 transition-all duration-300">
+            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i class="fas fa-wallet text-blue-500"></i> EDIT USER WALLET</h3>
+            <p id="edit-user-email" class="text-slate-400 text-xs mb-6 truncate"></p>
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="text-[10px] text-slate-500 font-bold uppercase mb-2 block">Available Balance (LKR)</label>
+                    <input type="number" id="edit-total-balance" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-lg font-bold text-white outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-500 font-bold uppercase mb-2 block">Pending Balance (LKR)</label>
+                    <input type="number" id="edit-pending-balance" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-lg font-bold text-amber-500 outline-none">
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeModals()" class="flex-1 px-6 py-3 rounded-xl hover:bg-white/5 transition-all text-xs font-bold uppercase">Cancel</button>
+                <button id="confirm-wallet-update-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl text-white text-xs font-bold uppercase transition-all">Update Wallet</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="explore-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300">
+        <div class="glass p-6 md:p-10 rounded-[2.5rem] w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col scale-95 transition-all duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-2xl font-black text-white flex items-center gap-3"><i class="fas fa-history text-blue-500"></i> ORDER HISTORY</h3>
+                    <p id="explore-user-email" class="text-slate-400 text-[10px] uppercase tracking-[0.2em] mt-1 font-bold"></p>
+                </div>
+                <button onclick="closeModals()" class="text-slate-500 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto custom-scrollbar rounded-2xl bg-black/20 border border-white/5 p-2">
+                <table class="w-full text-left">
+                    <thead class="sticky top-0 bg-slate-900 border-b border-white/5 z-10">
+                        <tr class="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                            <th class="px-6 py-4">Order ID</th>
+                            <th class="px-6 py-4">Service</th>
+                            <th class="px-6 py-4">Link</th>
+                            <th class="px-6 py-4">Qty</th>
+                            <th class="px-6 py-4">Charge</th>
+                            <th class="px-6 py-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="order-history-table" class="divide-y divide-white/5 text-xs"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white flex items-center gap-3 font-mono">
+                    <i class="fas fa-shield-halved text-blue-500"></i> DZD <span class="text-blue-500 italic">ADMIN</span>
+                </h1>
+                <p class="text-slate-500 font-medium text-sm mt-1 uppercase tracking-widest">Financial Control Terminal</p>
+            </div>
+            <div class="flex w-full md:w-auto gap-3">
+                <button onclick="fetchAllData()" class="glass flex-1 md:flex-none px-6 py-3.5 rounded-2xl hover:bg-white/5 active:scale-95 transition-all flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest">
+                    <i class="fas fa-sync-alt text-blue-400"></i> Refresh System
+                </button>
             </div>
         </div>
 
-        <div id="explore-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300">
-            <div class="glass p-6 md:p-10 rounded-[2.5rem] w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col scale-95 transition-all duration-300">
-                <div class="flex justify-between items-center mb-6">
-                    <div>
-                        <h3 class="text-2xl font-black text-white flex items-center gap-3"><i class="fas fa-history text-blue-500"></i> ORDER HISTORY</h3>
-                        <p id="explore-user-email" class="text-slate-400 text-[10px] uppercase tracking-[0.2em] mt-1 font-bold"></p>
-                    </div>
-                    <button onclick="closeModals()" class="text-slate-500 hover:text-white transition-all"><i class="fas fa-times text-2xl"></i></button>
-                </div>
-                <div class="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar rounded-2xl bg-black/20 border border-white/5">
-                    <table class="w-full text-left">
-                        <thead class="sticky top-0 bg-slate-900 border-b border-white/5 z-10">
-                            <tr class="text-[9px] font-black uppercase tracking-widest text-slate-500">
-                                <th class="px-6 py-4">Order ID</th>
-                                <th class="px-6 py-4">Date</th>
-                                <th class="px-6 py-4">Service</th>
-                                <th class="px-6 py-4">Link</th>
-                                <th class="px-6 py-4">Qty</th>
-                                <th class="px-6 py-4">Charge</th>
-                                <th class="px-6 py-4">Status</th>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+            <div class="bg-gradient-to-br from-blue-600 to-indigo-900 p-6 rounded-[2rem] shadow-xl border border-white/10">
+                <p class="text-[10px] font-black uppercase tracking-widest opacity-70">Global Orders</p>
+                <h3 id="stat-total-orders" class="text-3xl font-black mt-1">0</h3>
+            </div>
+            <div class="bg-gradient-to-br from-emerald-600 to-teal-900 p-6 rounded-[2rem] shadow-xl border border-white/10">
+                <p class="text-[10px] font-black uppercase tracking-widest opacity-70">Total Revenue</p>
+                <h3 id="stat-total-spent" class="text-3xl font-black mt-1">LKR 0</h3>
+            </div>
+            <div class="bg-gradient-to-br from-amber-500 to-orange-700 p-6 rounded-[2rem] shadow-xl border border-white/10">
+                <p class="text-[10px] font-black uppercase tracking-widest opacity-70">60% Net Profit</p>
+                <h3 id="stat-total-profit" class="text-3xl font-black mt-1">LKR 0</h3>
+            </div>
+        </div>
+
+        <section class="mb-12">
+            <h2 class="text-lg font-bold mb-6 flex items-center gap-3 px-2 font-mono">
+                <span class="w-1.5 h-6 bg-amber-500 rounded-full"></span>
+                <i class="fas fa-clock text-amber-500"></i> PENDING_VERIFICATIONS
+            </h2>
+            <div class="glass rounded-[2rem] overflow-hidden">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left min-w-[800px]">
+                        <thead class="bg-white/5 border-b border-white/5">
+                            <tr class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                <th class="px-8 py-5 text-center">Receipt</th>
+                                <th class="px-8 py-5">User / Contact</th>
+                                <th class="px-8 py-5">Amount (LKR)</th>
+                                <th class="px-8 py-5 text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="order-history-table" class="divide-y divide-white/5 text-xs"></tbody>
+                        <tbody id="pending-table" class="divide-y divide-white/5"></tbody>
                     </table>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <section class="mt-8">
-            <div class="flex justify-between items-center mb-6 px-2">
+        <section>
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-2">
                 <h2 class="text-lg font-bold flex items-center gap-3 font-mono">
-                    <span class="w-1.5 h-6 bg-emerald-500 rounded-full"></span> USER_WALLETS
+                    <span class="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
+                    <i class="fas fa-wallet text-emerald-500"></i> USER WALLET BALANCES
                 </h2>
-                <input type="text" id="user-search" oninput="filterWallets()" placeholder="Search Email..." class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs focus:border-blue-500 outline-none">
+                <div class="relative w-full md:w-72">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                    <input type="text" id="user-search" oninput="filterWallets()" placeholder="Search Email..." class="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:border-blue-500 outline-none transition-all">
+                </div>
             </div>
             <div class="glass rounded-[2rem] overflow-hidden">
-                <table class="w-full text-left min-w-[700px]">
-                    <tbody id="balance-table" class="divide-y divide-white/5"></tbody>
-                </table>
-            </div>
-            <div class="mt-6 flex justify-center">
-                <button id="load-more-btn" onclick="loadMore()" class="px-10 py-3 glass rounded-xl text-[10px] font-bold uppercase hover:bg-white/5 transition-all">Load More Users</button>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left min-w-[700px]">
+                        <thead class="bg-white/5 border-b border-white/5">
+                            <tr class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                <th class="px-8 py-5">User ID / Email</th>
+                                <th class="px-8 py-5">Total Available</th>
+                                <th class="px-8 py-5 text-center">History</th>
+                                <th class="px-8 py-5 text-right">Settings</th>
+                            </tr>
+                        </thead>
+                        <tbody id="balance-table" class="divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
+                <div id="load-more-container" class="p-6 text-center">
+                    <button onclick="loadMoreUsers()" class="px-10 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Load More Users</button>
+                </div>
             </div>
         </section>
     </div>
 
-    <div id="reject-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
-        </div>
-    <div id="approve-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
-        </div>
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 glass px-8 py-4 rounded-2xl hidden z-[200] flex items-center gap-3">
+        <i id="toast-icon"></i>
+        <p id="toast-msg" class="text-xs font-bold uppercase tracking-widest"></p>
+    </div>
 
     <script>
-        // --- AUTH SYSTEM ---
-        let attempts = 0;
-        function checkAuth() {
-            const pass = document.getElementById('admin-pass').value;
-            const error = document.getElementById('auth-error');
-            const blockTime = localStorage.getItem('dzd_block_until');
-
-            if (blockTime && Date.now() < blockTime) {
-                const mins = Math.ceil((blockTime - Date.now()) / 60000);
-                error.innerText = `LOCKED: TRY AGAIN IN ${mins} MINUTES`;
-                return;
-            }
-
-            if (pass === "dzd-page") {
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('main-interface').classList.remove('hidden-content');
-                fetchAllData();
-                fetchGlobalStats();
-            } else {
-                attempts++;
-                error.innerText = `INVALID PASSWORD (${attempts}/5)`;
-                if (attempts >= 5) {
-                    const lockUntil = Date.now() + (60 * 60 * 1000);
-                    localStorage.setItem('dzd_block_until', lockUntil);
-                    error.innerText = "5 FAILED ATTEMPTS. BLOCKED FOR 1 HOUR.";
-                }
-            }
-        }
-
-        // --- FIREBASE CONFIG ---
         const firebaseConfig = {
-            apiKey: "AIzaSy...", // ඔබේ Firebase API Key එක දමන්න
+            apiKey: "AIzaSy...",
             authDomain: "dzd-marketing.firebaseapp.com",
             projectId: "dzd-marketing",
             storageBucket: "dzd-marketing.appspot.com",
             messagingSenderId: "...",
             appId: "..."
         };
+
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         const API_BASE = "https://dzd-billing-api.sitewasd2026.workers.dev";
+        const R2_URL = "https://pub-f893424a8cd243ec86cc2763301f5c0f.r2.dev"; 
+        
         let allWallets = [];
-        let displayLimit = 20;
+        let displayedCount = 20;
 
-        // --- FETCH GLOBAL STATS ---
-        async function fetchGlobalStats() {
-            try {
-                const snapshot = await db.collection('orders').get();
-                let totalOrders = snapshot.size;
-                let totalRevenue = 0;
+        // --- PASSWORD LOGIC ---
+        function checkPassword() {
+            const pass = document.getElementById('admin-password').value;
+            const error = document.getElementById('auth-error');
+            const attemptsKey = 'dzd_auth_attempts';
+            const blockKey = 'dzd_auth_blocked';
+            
+            const blockedUntil = localStorage.getItem(blockKey);
+            if (blockedUntil && Date.now() < blockedUntil) {
+                const mins = Math.ceil((blockedUntil - Date.now()) / 60000);
+                error.innerText = `BLOCKED! TRY AGAIN IN ${mins} MINUTES.`;
+                return;
+            }
 
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    totalRevenue += parseFloat(data.charge || 0);
-                });
-
-                document.getElementById('stat-total-orders').innerText = totalOrders.toLocaleString();
-                document.getElementById('stat-total-revenue').innerText = `LKR ${totalRevenue.toLocaleString()}`;
-                document.getElementById('stat-total-profit').innerText = `LKR ${(totalRevenue * 0.6).toLocaleString()}`;
-            } catch (e) { console.error("Stats Error:", e); }
+            if (pass === 'dzd-page') {
+                localStorage.removeItem(attemptsKey);
+                document.getElementById('auth-overlay').style.display = 'none';
+                document.body.style.display = 'block';
+                fetchAllData();
+            } else {
+                let attempts = parseInt(localStorage.getItem(attemptsKey) || 0) + 1;
+                localStorage.setItem(attemptsKey, attempts);
+                if (attempts >= 5) {
+                    const blockTime = Date.now() + (60 * 60 * 1000);
+                    localStorage.setItem(blockKey, blockTime);
+                    error.innerText = "5 FAILED ATTEMPTS. BLOCKED FOR 1 HOUR.";
+                } else {
+                    error.innerText = `WRONG PASSWORD! ${5 - attempts} ATTEMPTS LEFT.`;
+                }
+            }
         }
 
-        // --- EXPLORE MODAL (ORDER ID & LINK FIXED) ---
+        async function fetchAllData() {
+            loadPending();
+            loadBalances();
+            loadGlobalStats();
+        }
+
+        async function loadGlobalStats() {
+            try {
+                const snap = await db.collection('orders').get();
+                let totalSpent = 0;
+                snap.forEach(doc => totalSpent += parseFloat(doc.data().charge || 0));
+                
+                document.getElementById('stat-total-orders').innerText = snap.size;
+                document.getElementById('stat-total-spent').innerText = `LKR ${totalSpent.toLocaleString()}`;
+                document.getElementById('stat-total-profit').innerText = `LKR ${(totalSpent * 0.6).toLocaleString()}`;
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadPending() {
+            const tbody = document.getElementById('pending-table');
+            try {
+                const res = await fetch(`${API_BASE}/admin/get-pending-deposits`);
+                const data = await res.json();
+                tbody.innerHTML = data.length === 0 ? '<tr><td colspan="4" class="p-10 text-center">No pending deposits</td></tr>' : 
+                data.map(i => `
+                    <tr class="hover:bg-white/[0.02] transition-colors group">
+                        <td class="px-8 py-4 text-center">
+                            <a href="${i.receipt_url.includes('http') ? i.receipt_url : R2_URL+'/'+i.receipt_url}" target="_blank">
+                                <img src="${i.receipt_url.includes('http') ? i.receipt_url : R2_URL+'/'+i.receipt_url}" class="w-12 h-12 object-cover rounded-lg border border-white/10 mx-auto">
+                            </a>
+                        </td>
+                        <td class="px-8 py-6 font-bold text-white">${i.email}</td>
+                        <td class="px-8 py-6 font-black text-emerald-400">LKR ${parseFloat(i.amount).toLocaleString()}</td>
+                        <td class="px-8 py-6 text-right flex justify-end gap-3">
+                            <button onclick="openRejectModal(${i.id}, '${i.user_id}', ${i.amount})" class="w-11 h-11 text-red-500 bg-red-500/5 hover:bg-red-500 hover:text-white rounded-xl transition-all"><i class="fas fa-times"></i></button>
+                            <button onclick="openApproveModal(${i.id}, '${i.user_id}', ${i.amount})" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-xl text-[10px] font-black uppercase">Approve</button>
+                        </td>
+                    </tr>`).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadBalances() {
+            try {
+                const res = await fetch(`${API_BASE}/admin/all-wallets`);
+                allWallets = await res.json();
+                renderWallets();
+            } catch (e) { console.error(e); }
+        }
+
+        function renderWallets() {
+            const tbody = document.getElementById('balance-table');
+            const term = document.getElementById('user-search').value.toLowerCase();
+            const filtered = allWallets.filter(w => w.email.toLowerCase().includes(term));
+            
+            const toShow = filtered.slice(0, displayedCount);
+            
+            tbody.innerHTML = toShow.map(i => `
+                <tr class="hover:bg-white/[0.02] transition-colors">
+                    <td class="px-8 py-5">
+                        <div class="text-sm font-bold text-slate-300">${i.email}</div>
+                        <div class="text-[9px] text-slate-600 font-mono">${i.user_id}</div>
+                    </td>
+                    <td class="px-8 py-5">
+                        <div class="font-black text-white">LKR ${parseFloat(i.total_balance).toLocaleString()}</div>
+                        <div class="text-[9px] text-amber-500 font-bold">Pending: LKR ${parseFloat(i.pending_balance).toLocaleString()}</div>
+                    </td>
+                    <td class="px-8 py-5 text-center">
+                        <button onclick="openExploreModal('${i.user_id}', '${i.email}')" class="bg-blue-500 hover:bg-blue-400 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95">
+                           <i class="fas fa-compass mr-1"></i> Explore
+                        </button>
+                    </td>
+                    <td class="px-8 py-5 text-right">
+                        <button onclick="openWalletEditModal('${i.user_id}', '${i.email}', ${i.total_balance}, ${i.pending_balance})" class="text-blue-400 hover:text-white transition-colors text-xs font-bold uppercase"><i class="fas fa-edit mr-1"></i> Edit</button>
+                    </td>
+                </tr>`).join('');
+
+            document.getElementById('load-more-container').style.display = displayedCount >= filtered.length ? 'none' : 'block';
+        }
+
+        function loadMoreUsers() {
+            displayedCount += 20;
+            renderWallets();
+        }
+
+        function filterWallets() {
+            displayedCount = 20;
+            renderWallets();
+        }
+
+        // --- ENHANCED EXPLORE MODAL ---
         async function openExploreModal(userId, email) {
             const modal = document.getElementById('explore-modal');
             const tableBody = document.getElementById('order-history-table');
             document.getElementById('explore-user-email').innerText = email;
             
-            tableBody.innerHTML = '<tr><td colspan="7" class="p-10 text-center opacity-50"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="6" class="p-10 text-center opacity-50"><i class="fas fa-spinner fa-spin mr-2"></i> Fetching Firestore records...</td></tr>';
             modal.classList.add('modal-active');
 
             try {
                 const querySnapshot = await db.collection('orders')
                     .where('userId', '==', userId)
+                    .orderBy('createdAt', 'desc')
                     .get();
 
                 if(querySnapshot.empty) {
-                    tableBody.innerHTML = '<tr><td colspan="7" class="p-10 text-center">No orders found.</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-500">No history found.</td></tr>';
                 } else {
                     let html = '';
                     querySnapshot.forEach((doc) => {
                         const o = doc.data();
-                        const date = o.createdAt ? o.createdAt.toDate().toLocaleDateString() : 'N/A';
+                        // Get numeric ID if available, else slice firestore ID
+                        const numericId = o.orderId || doc.id.replace(/\D/g, '').slice(0, 8) || doc.id.slice(-6);
                         
                         html += `
                             <tr class="hover:bg-white/[0.03]">
-                                <td class="px-6 py-4 font-mono text-blue-400">#${o.orderId || 'N/A'}</td>
-                                <td class="px-6 py-4 text-slate-400">${date}</td>
+                                <td class="px-6 py-4 font-mono text-blue-400">#${numericId}</td>
                                 <td class="px-6 py-4 font-bold text-white">${o.serviceName || 'N/A'}</td>
-                                <td class="px-6 py-4">
-                                    <a href="${o.link}" target="_blank" class="text-blue-500 hover:underline"><i class="fas fa-external-link-alt"></i></a>
-                                </td>
+                                <td class="px-6 py-4"><a href="${o.link || '#'}" target="_blank" class="text-blue-500 underline truncate max-w-[150px] block">${o.link || 'No Link'}</a></td>
                                 <td class="px-6 py-4">${o.quantity || '0'}</td>
                                 <td class="px-6 py-4 font-black text-emerald-400">LKR ${parseFloat(o.charge || 0).toLocaleString()}</td>
                                 <td class="px-6 py-4">
@@ -212,56 +396,88 @@
                     tableBody.innerHTML = html;
                 }
             } catch (e) {
-                tableBody.innerHTML = `<tr><td colspan="7" class="p-10 text-center text-red-500">${e.message}</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-red-500">Error: ${e.message}</td></tr>`;
             }
         }
 
-        // --- PAGINATION ---
-        function loadMore() {
-            displayLimit += 20;
-            renderWallets(allWallets);
+        // --- WALLET EDIT & OTHER FUNCTIONS (Remain same as your original) ---
+        function openWalletEditModal(userId, email, total, pending) {
+            const modal = document.getElementById('wallet-edit-modal');
+            document.getElementById('edit-user-email').innerText = `Editing: ${email}`;
+            document.getElementById('edit-total-balance').value = total;
+            document.getElementById('edit-pending-balance').value = pending;
+            modal.classList.add('modal-active');
+
+            document.getElementById('confirm-wallet-update-btn').onclick = async () => {
+                const newTotal = parseFloat(document.getElementById('edit-total-balance').value);
+                const newPending = parseFloat(document.getElementById('edit-pending-balance').value);
+                try {
+                    const res = await fetch(`${API_BASE}/admin/update-wallet`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ userId, totalBalance: newTotal, pendingBalance: newPending })
+                    });
+                    if(res.ok) {
+                        showToast("Wallet Updated Successfully", "text-emerald-400", "fa-check-circle");
+                        loadBalances();
+                        closeModals();
+                    }
+                } catch (e) { showToast("Network Error", "text-red-400", "fa-wifi"); }
+            };
         }
 
-        function renderWallets(data) {
-            const tbody = document.getElementById('balance-table');
-            const slice = data.slice(0, displayLimit);
-            
-            tbody.innerHTML = slice.map(i => `
-                <tr class="hover:bg-white/[0.02] transition-colors">
-                    <td class="px-8 py-5">
-                        <div class="text-sm font-bold text-slate-300">${i.email}</div>
-                        <div class="text-[9px] text-slate-600 font-mono">${i.user_id}</div>
-                    </td>
-                    <td class="px-8 py-5">
-                        <div class="font-black text-white">LKR ${parseFloat(i.total_balance).toLocaleString()}</div>
-                        <div class="text-[9px] text-amber-500 font-bold">Pending: LKR ${parseFloat(i.pending_balance).toLocaleString()}</div>
-                    </td>
-                    <td class="px-8 py-5 text-center">
-                        <button onclick="openExploreModal('${i.user_id}', '${i.email}')" class="bg-blue-500 hover:bg-blue-400 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">
-                           <i class="fas fa-compass mr-1"></i> Explore
-                        </button>
-                    </td>
-                    <td class="px-8 py-5 text-right">
-                        <button onclick="openWalletEditModal('${i.user_id}', '${i.email}', ${i.total_balance}, ${i.pending_balance})" class="text-blue-400 hover:text-white transition-colors text-xs font-bold uppercase"><i class="fas fa-edit"></i></button>
-                    </td>
-                </tr>`).join('');
-            
-            document.getElementById('load-more-btn').style.display = displayLimit >= data.length ? 'none' : 'block';
+        function openApproveModal(id, userId, amount) {
+            const modal = document.getElementById('approve-modal');
+            const input = document.getElementById('approve-amount-input');
+            input.value = amount;
+            modal.classList.add('modal-active');
+            document.getElementById('confirm-approve-btn').onclick = () => {
+                updateStatus(id, userId, parseFloat(input.value), 'approved');
+                closeModals();
+            };
         }
 
-        async function fetchAllData() {
-            try {
-                const res = await fetch(`${API_BASE}/admin/all-wallets`);
-                allWallets = await res.json();
-                renderWallets(allWallets);
-            } catch (e) { console.error(e); }
+        function openRejectModal(id, userId, amount) {
+            const modal = document.getElementById('reject-modal');
+            modal.classList.add('modal-active');
+            document.getElementById('confirm-reject-btn').onclick = () => {
+                const reason = document.getElementById('reject-reason-select').value;
+                updateStatus(id, userId, amount, 'rejected', reason);
+                closeModals();
+            };
         }
 
         function closeModals() {
-            document.querySelectorAll('.fixed').forEach(m => {
-                if(m.id !== 'login-overlay') m.classList.remove('modal-active');
-            });
+            document.querySelectorAll('.fixed').forEach(m => m.classList.remove('modal-active'));
         }
+
+        async function updateStatus(id, userId, amount, status, reason = "") {
+            try {
+                const res = await fetch(`${API_BASE}/admin/update-deposit`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id, userId, amount, status, reason })
+                });
+                if(res.ok) {
+                    showToast(`Transaction ${status.toUpperCase()} Success`, status === 'approved' ? 'text-emerald-400' : 'text-red-400', 'fa-check-circle');
+                    fetchAllData();
+                }
+            } catch (e) { showToast("API Error", "text-red-400", "fa-wifi"); }
+        }
+
+        function showToast(msg, color = 'text-blue-400', iconClass = 'fa-info-circle') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.className = `fixed bottom-10 left-1/2 -translate-x-1/2 glass px-8 py-4 rounded-2xl z-[200] flex items-center gap-3 shadow-2xl border border-white/10 ${color}`;
+            document.getElementById('toast-icon').className = `fas ${iconClass}`;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 4000);
+        }
+
+        document.addEventListener('click', function() {
+            const audio = document.getElementById('bg-audio');
+            if (audio.paused) audio.play();
+        }, { once: true });
     </script>
 </body>
 </html>
