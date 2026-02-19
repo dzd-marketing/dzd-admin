@@ -6,6 +6,10 @@
     <title>DZD Professional Admin | Explorer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
         body { 
@@ -29,9 +33,7 @@
 
     <div id="reject-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
         <div class="glass p-8 rounded-[2.5rem] w-full max-w-md scale-90 transition-all duration-300">
-            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                <i class="fas fa-exclamation-triangle text-red-500"></i> REJECTION REASON
-            </h3>
+            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i class="fas fa-exclamation-triangle text-red-500"></i> REJECTION REASON</h3>
             <select id="reject-reason-select" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-sm text-white mb-6 outline-none">
                 <option value="Invalid Receipt Image">Invalid Receipt Image</option>
                 <option value="Amount Mismatch">Amount Mismatch</option>
@@ -40,47 +42,42 @@
             </select>
             <div class="flex gap-3">
                 <button onclick="closeModals()" class="flex-1 px-6 py-3 rounded-xl hover:bg-white/5 transition-all text-xs font-bold uppercase">Cancel</button>
-                <button id="confirm-reject-btn" class="flex-1 bg-red-600 hover:bg-red-500 px-6 py-3 rounded-xl text-white text-xs font-bold uppercase transition-all shadow-lg shadow-red-900/20">Confirm Reject</button>
+                <button id="confirm-reject-btn" class="flex-1 bg-red-600 hover:bg-red-500 px-6 py-3 rounded-xl text-white text-xs font-bold uppercase transition-all">Confirm Reject</button>
             </div>
         </div>
     </div>
 
     <div id="approve-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
         <div class="glass p-8 rounded-[2.5rem] w-full max-w-md scale-90 transition-all duration-300">
-            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                <i class="fas fa-check-circle text-blue-500"></i> APPROVE DEPOSIT
-            </h3>
-            <p class="text-slate-400 text-xs mb-6 uppercase tracking-widest">Verify or Correct the final amount</p>
+            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i class="fas fa-check-circle text-blue-500"></i> APPROVE DEPOSIT</h3>
             <div class="mb-6">
                 <label class="text-[10px] text-slate-500 font-bold uppercase mb-2 block">Final Amount (LKR)</label>
-                <input type="number" id="approve-amount-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-xl font-bold text-emerald-400 outline-none focus:border-blue-500">
+                <input type="number" id="approve-amount-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-xl font-bold text-emerald-400 outline-none">
             </div>
             <div class="flex gap-3">
                 <button onclick="closeModals()" class="flex-1 px-6 py-3 rounded-xl hover:bg-white/5 transition-all text-xs font-bold uppercase">Cancel</button>
-                <button id="confirm-approve-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl text-white text-xs font-bold uppercase transition-all shadow-lg shadow-blue-900/20">Confirm Approve</button>
+                <button id="confirm-approve-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl text-white text-xs font-bold uppercase transition-all">Confirm Approve</button>
             </div>
         </div>
     </div>
 
     <div id="wallet-edit-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
         <div class="glass p-8 rounded-[2.5rem] w-full max-w-md scale-90 transition-all duration-300">
-            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                <i class="fas fa-wallet text-blue-500"></i> EDIT USER WALLET
-            </h3>
+            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i class="fas fa-wallet text-blue-500"></i> EDIT USER WALLET</h3>
             <p id="edit-user-email" class="text-slate-400 text-xs mb-6 truncate"></p>
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="text-[10px] text-slate-500 font-bold uppercase mb-2 block">Available Balance (LKR)</label>
-                    <input type="number" id="edit-total-balance" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-lg font-bold text-white outline-none focus:border-blue-500">
+                    <input type="number" id="edit-total-balance" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-lg font-bold text-white outline-none">
                 </div>
                 <div>
                     <label class="text-[10px] text-slate-500 font-bold uppercase mb-2 block">Pending Balance (LKR)</label>
-                    <input type="number" id="edit-pending-balance" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-lg font-bold text-amber-500 outline-none focus:border-amber-500">
+                    <input type="number" id="edit-pending-balance" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-lg font-bold text-amber-500 outline-none">
                 </div>
             </div>
             <div class="flex gap-3">
                 <button onclick="closeModals()" class="flex-1 px-6 py-3 rounded-xl hover:bg-white/5 transition-all text-xs font-bold uppercase">Cancel</button>
-                <button id="confirm-wallet-update-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl text-white text-xs font-bold uppercase transition-all shadow-lg shadow-blue-900/20">Update Wallet</button>
+                <button id="confirm-wallet-update-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl text-white text-xs font-bold uppercase transition-all">Update Wallet</button>
             </div>
         </div>
     </div>
@@ -89,9 +86,7 @@
         <div class="glass p-6 md:p-10 rounded-[2.5rem] w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col scale-95 transition-all duration-300">
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <h3 class="text-2xl font-black text-white flex items-center gap-3">
-                        <i class="fas fa-history text-blue-500"></i> ORDER HISTORY
-                    </h3>
+                    <h3 class="text-2xl font-black text-white flex items-center gap-3"><i class="fas fa-history text-blue-500"></i> ORDER HISTORY</h3>
                     <p id="explore-user-email" class="text-slate-400 text-[10px] uppercase tracking-[0.2em] mt-1 font-bold"></p>
                 </div>
                 <div class="bg-blue-500/10 px-4 py-2 rounded-2xl border border-blue-500/20 text-center">
@@ -99,7 +94,6 @@
                     <div class="text-[8px] uppercase font-bold text-slate-500">Total Orders</div>
                 </div>
             </div>
-
             <div class="flex-1 overflow-y-auto custom-scrollbar rounded-2xl bg-black/20 border border-white/5 p-2">
                 <table class="w-full text-left">
                     <thead class="sticky top-0 bg-slate-900 border-b border-white/5 z-10">
@@ -107,15 +101,14 @@
                             <th class="px-6 py-4">Order ID</th>
                             <th class="px-6 py-4">Date</th>
                             <th class="px-6 py-4">Service</th>
-                            <th class="px-6 py-4">Amount</th>
+                            <th class="px-6 py-4">Quantity</th>
+                            <th class="px-6 py-4">Charge</th>
                             <th class="px-6 py-4">Status</th>
                         </tr>
                     </thead>
-                    <tbody id="order-history-table" class="divide-y divide-white/5 text-xs">
-                        </tbody>
+                    <tbody id="order-history-table" class="divide-y divide-white/5 text-xs"></tbody>
                 </table>
             </div>
-
             <div class="mt-6 flex justify-end">
                 <button onclick="closeModals()" class="px-10 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold uppercase transition-all">Close History</button>
             </div>
@@ -194,6 +187,20 @@
     </div>
 
     <script>
+        // --- FIREBASE CONFIGURATION (මෙතැන ඔබේ Firebase විස්තර දමන්න) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSy...",
+            authDomain: "dzd-marketing.firebaseapp.com",
+            projectId: "dzd-marketing",
+            storageBucket: "dzd-marketing.appspot.com",
+            messagingSenderId: "...",
+            appId: "..."
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         const API_BASE = "https://dzd-billing-api.sitewasd2026.workers.dev";
         const R2_URL = "https://pub-f893424a8cd243ec86cc2763301f5c0f.r2.dev"; 
         let allWallets = [];
@@ -267,7 +274,7 @@
                 </tr>`).join('');
         }
 
-        // --- EXPLORE MODAL LOGIC (Order History) ---
+        // --- EXPLORE MODAL LOGIC (Firebass Firestore integration) ---
         async function openExploreModal(userId, email) {
             const modal = document.getElementById('explore-modal');
             const tableBody = document.getElementById('order-history-table');
@@ -275,38 +282,48 @@
             const countDisplay = document.getElementById('total-orders-count');
             
             emailDisplay.innerText = email;
-            tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center opacity-50"><i class="fas fa-spinner fa-spin mr-2"></i> Fetching records...</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="6" class="p-10 text-center opacity-50"><i class="fas fa-spinner fa-spin mr-2"></i> Fetching Firestore records...</td></tr>';
             countDisplay.innerText = "...";
             
             modal.classList.add('modal-active');
 
             try {
-                // සටහන: මෙහිදී ඔබගේ API එකේ "/admin/user-orders" වැනි endpoint එකක් තිබිය යුතුය.
-                // නැතිනම් මෙය ඔබගේ backend එකට අනුව සකස් කරගන්න.
-                const res = await fetch(`${API_BASE}/admin/user-orders?userId=${userId}`);
-                const orders = await res.json();
-                
-                countDisplay.innerText = orders.length;
+                // Firestore එකෙන් අදාළ userId එකට අයිති orders ලබා ගැනීම
+                // Collection එකේ නම 'orders' බව උපකල්පනය කර ඇත
+                const querySnapshot = await db.collection('orders')
+                    .where('userId', '==', userId)
+                    .orderBy('createdAt', 'desc') // Order history එක අලුත්ම එක මුලට එන සේ
+                    .get();
 
-                if(orders.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-500">No order history found for this user.</td></tr>';
+                countDisplay.innerText = querySnapshot.size;
+
+                if(querySnapshot.empty) {
+                    tableBody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-500">No order history found in Firestore.</td></tr>';
                 } else {
-                    tableBody.innerHTML = orders.map(o => `
-                        <tr class="hover:bg-white/[0.03]">
-                            <td class="px-6 py-4 font-mono text-blue-400">#${o.id.toString().slice(-6)}</td>
-                            <td class="px-6 py-4 text-slate-400">${new Date(o.created_at).toLocaleDateString()}</td>
-                            <td class="px-6 py-4 font-bold text-white">${o.service_name || 'Service Purchase'}</td>
-                            <td class="px-6 py-4 font-black">LKR ${parseFloat(o.amount).toLocaleString()}</td>
-                            <td class="px-6 py-4">
-                                <span class="px-2 py-1 rounded-md text-[9px] font-bold uppercase ${o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}">
-                                    ${o.status}
-                                </span>
-                            </td>
-                        </tr>
-                    `).join('');
+                    let html = '';
+                    querySnapshot.forEach((doc) => {
+                        const o = doc.data();
+                        const date = o.createdAt ? new Date(o.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
+                        
+                        html += `
+                            <tr class="hover:bg-white/[0.03]">
+                                <td class="px-6 py-4 font-mono text-blue-400">#${doc.id.slice(-6).toUpperCase()}</td>
+                                <td class="px-6 py-4 text-slate-400">${date}</td>
+                                <td class="px-6 py-4 font-bold text-white">${o.serviceName || 'N/A'}</td>
+                                <td class="px-6 py-4">${o.quantity || '0'}</td>
+                                <td class="px-6 py-4 font-black text-emerald-400">LKR ${parseFloat(o.charge || 0).toLocaleString()}</td>
+                                <td class="px-6 py-4">
+                                    <span class="px-2 py-1 rounded-md text-[9px] font-bold uppercase ${o.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}">
+                                        ${o.status || 'Pending'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    tableBody.innerHTML = html;
                 }
             } catch (e) {
-                tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-red-500">Failed to load order history.</td></tr>';
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-red-500">Firestore Error: ${e.message}</td></tr>`;
                 console.error(e);
             }
         }
@@ -337,8 +354,6 @@
                         showToast("Wallet Updated Successfully", "text-emerald-400", "fa-check-circle");
                         loadBalances();
                         closeModals();
-                    } else {
-                        showToast("Server Update Failed", "text-red-400", "fa-times-circle");
                     }
                 } catch (e) { showToast("Network Error", "text-red-400", "fa-wifi"); }
             };
@@ -383,7 +398,6 @@
             } catch (e) { showToast("API Error", "text-red-400", "fa-wifi"); }
         }
 
-        // Initialize Audio on first click (Browser restriction bypass)
         document.addEventListener('click', function() {
             const audio = document.getElementById('bg-audio');
             if (audio.paused) audio.play();
