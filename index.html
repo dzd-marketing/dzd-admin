@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DZD Professional Admin</title>
+    <title>DZD Professional Admin | Explorer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -22,6 +22,10 @@
     </style>
 </head>
 <body class="text-slate-200 p-4 md:p-8 min-h-screen">
+
+    <audio id="bg-audio" loop autoplay hidden>
+        <source src="https://github.com/Akashkavindu/ZANTA_MD/raw/main/images/Edward%20Maya%20and%20Vika%20Jigulina%20-%20Stereo%20Love%20(Karaoke%20Version).mp3" type="audio/mpeg">
+    </audio>
 
     <div id="reject-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
         <div class="glass p-8 rounded-[2.5rem] w-full max-w-md scale-90 transition-all duration-300">
@@ -64,7 +68,6 @@
                 <i class="fas fa-wallet text-blue-500"></i> EDIT USER WALLET
             </h3>
             <p id="edit-user-email" class="text-slate-400 text-xs mb-6 truncate"></p>
-            
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="text-[10px] text-slate-500 font-bold uppercase mb-2 block">Available Balance (LKR)</label>
@@ -75,10 +78,46 @@
                     <input type="number" id="edit-pending-balance" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-lg font-bold text-amber-500 outline-none focus:border-amber-500">
                 </div>
             </div>
-
             <div class="flex gap-3">
                 <button onclick="closeModals()" class="flex-1 px-6 py-3 rounded-xl hover:bg-white/5 transition-all text-xs font-bold uppercase">Cancel</button>
                 <button id="confirm-wallet-update-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl text-white text-xs font-bold uppercase transition-all shadow-lg shadow-blue-900/20">Update Wallet</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="explore-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300">
+        <div class="glass p-6 md:p-10 rounded-[2.5rem] w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col scale-95 transition-all duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-2xl font-black text-white flex items-center gap-3">
+                        <i class="fas fa-history text-blue-500"></i> ORDER HISTORY
+                    </h3>
+                    <p id="explore-user-email" class="text-slate-400 text-[10px] uppercase tracking-[0.2em] mt-1 font-bold"></p>
+                </div>
+                <div class="bg-blue-500/10 px-4 py-2 rounded-2xl border border-blue-500/20 text-center">
+                    <div id="total-orders-count" class="text-xl font-black text-blue-400">0</div>
+                    <div class="text-[8px] uppercase font-bold text-slate-500">Total Orders</div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar rounded-2xl bg-black/20 border border-white/5 p-2">
+                <table class="w-full text-left">
+                    <thead class="sticky top-0 bg-slate-900 border-b border-white/5 z-10">
+                        <tr class="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                            <th class="px-6 py-4">Order ID</th>
+                            <th class="px-6 py-4">Date</th>
+                            <th class="px-6 py-4">Service</th>
+                            <th class="px-6 py-4">Amount</th>
+                            <th class="px-6 py-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="order-history-table" class="divide-y divide-white/5 text-xs">
+                        </tbody>
+                </table>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeModals()" class="px-10 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold uppercase transition-all">Close History</button>
             </div>
         </div>
     </div>
@@ -138,7 +177,7 @@
                             <tr class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                                 <th class="px-8 py-5">User ID / Email</th>
                                 <th class="px-8 py-5">Total Available</th>
-                                <th class="px-8 py-5">Pending Clearance</th>
+                                <th class="px-8 py-5 text-center">History</th>
                                 <th class="px-8 py-5 text-right">Settings</th>
                             </tr>
                         </thead>
@@ -213,12 +252,63 @@
                         <div class="text-sm font-bold text-slate-300">${i.email}</div>
                         <div class="text-[9px] text-slate-600 font-mono">${i.user_id}</div>
                     </td>
-                    <td class="px-8 py-5 font-black text-white">LKR ${parseFloat(i.total_balance).toLocaleString()}</td>
-                    <td class="px-8 py-5 text-amber-500 font-bold">LKR ${parseFloat(i.pending_balance).toLocaleString()}</td>
+                    <td class="px-8 py-5">
+                        <div class="font-black text-white">LKR ${parseFloat(i.total_balance).toLocaleString()}</div>
+                        <div class="text-[9px] text-amber-500 font-bold">Pending: LKR ${parseFloat(i.pending_balance).toLocaleString()}</div>
+                    </td>
+                    <td class="px-8 py-5 text-center">
+                        <button onclick="openExploreModal('${i.user_id}', '${i.email}')" class="bg-blue-500 hover:bg-blue-400 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95">
+                           <i class="fas fa-compass mr-1"></i> Explore
+                        </button>
+                    </td>
                     <td class="px-8 py-5 text-right">
                         <button onclick="openWalletEditModal('${i.user_id}', '${i.email}', ${i.total_balance}, ${i.pending_balance})" class="text-blue-400 hover:text-white transition-colors text-xs font-bold uppercase"><i class="fas fa-edit mr-1"></i> Edit</button>
                     </td>
                 </tr>`).join('');
+        }
+
+        // --- EXPLORE MODAL LOGIC (Order History) ---
+        async function openExploreModal(userId, email) {
+            const modal = document.getElementById('explore-modal');
+            const tableBody = document.getElementById('order-history-table');
+            const emailDisplay = document.getElementById('explore-user-email');
+            const countDisplay = document.getElementById('total-orders-count');
+            
+            emailDisplay.innerText = email;
+            tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center opacity-50"><i class="fas fa-spinner fa-spin mr-2"></i> Fetching records...</td></tr>';
+            countDisplay.innerText = "...";
+            
+            modal.classList.add('modal-active');
+
+            try {
+                // සටහන: මෙහිදී ඔබගේ API එකේ "/admin/user-orders" වැනි endpoint එකක් තිබිය යුතුය.
+                // නැතිනම් මෙය ඔබගේ backend එකට අනුව සකස් කරගන්න.
+                const res = await fetch(`${API_BASE}/admin/user-orders?userId=${userId}`);
+                const orders = await res.json();
+                
+                countDisplay.innerText = orders.length;
+
+                if(orders.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-500">No order history found for this user.</td></tr>';
+                } else {
+                    tableBody.innerHTML = orders.map(o => `
+                        <tr class="hover:bg-white/[0.03]">
+                            <td class="px-6 py-4 font-mono text-blue-400">#${o.id.toString().slice(-6)}</td>
+                            <td class="px-6 py-4 text-slate-400">${new Date(o.created_at).toLocaleDateString()}</td>
+                            <td class="px-6 py-4 font-bold text-white">${o.service_name || 'Service Purchase'}</td>
+                            <td class="px-6 py-4 font-black">LKR ${parseFloat(o.amount).toLocaleString()}</td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 rounded-md text-[9px] font-bold uppercase ${o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}">
+                                    ${o.status}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (e) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-red-500">Failed to load order history.</td></tr>';
+                console.error(e);
+            }
         }
 
         function filterWallets() {
@@ -232,25 +322,17 @@
             document.getElementById('edit-user-email').innerText = `Editing: ${email}`;
             document.getElementById('edit-total-balance').value = total;
             document.getElementById('edit-pending-balance').value = pending;
-            
             modal.classList.add('modal-active');
 
             document.getElementById('confirm-wallet-update-btn').onclick = async () => {
                 const newTotal = parseFloat(document.getElementById('edit-total-balance').value);
                 const newPending = parseFloat(document.getElementById('edit-pending-balance').value);
-
                 try {
                     const res = await fetch(`${API_BASE}/admin/update-wallet`, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        // මෙහිදී backend එක බලාපොරොත්තු වන field names (total_balance, pending_balance) නිවැරදි දැයි බලන්න
-                        body: JSON.stringify({ 
-                            userId, 
-                            totalBalance: newTotal, 
-                            pendingBalance: newPending 
-                        })
+                        body: JSON.stringify({ userId, totalBalance: newTotal, pendingBalance: newPending })
                     });
-                    
                     if(res.ok) {
                         showToast("Wallet Updated Successfully", "text-emerald-400", "fa-check-circle");
                         loadBalances();
@@ -301,8 +383,13 @@
             } catch (e) { showToast("API Error", "text-red-400", "fa-wifi"); }
         }
 
+        // Initialize Audio on first click (Browser restriction bypass)
+        document.addEventListener('click', function() {
+            const audio = document.getElementById('bg-audio');
+            if (audio.paused) audio.play();
+        }, { once: true });
+
         fetchAllData();
     </script>
 </body>
-
 </html>
