@@ -33,7 +33,7 @@
         <div class="glass p-8 rounded-[2rem] w-full max-w-sm text-center">
             <i class="fas fa-lock text-blue-500 text-3xl mb-4"></i>
             <h2 class="text-xl font-bold mb-6">SECURE ACCESS</h2>
-            <input type="password" id="admin-pass" placeholder="Enter Password" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-center mb-4 outline-none focus:border-blue-500">
+            <input type="password" id="admin-pass" name="admin_password_field" autocomplete="new-password" placeholder="Enter Password" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-center mb-4 outline-none focus:border-blue-500">
             <button onclick="checkAuth()" class="w-full bg-blue-600 py-3 rounded-xl font-bold hover:bg-blue-500 transition-all">ACCESS TERMINAL</button>
             <p id="auth-msg" class="text-red-500 text-[10px] mt-4 font-bold uppercase"></p>
         </div>
@@ -228,6 +228,10 @@
     <script>
         // --- AUTH SYSTEM ---
         const MASTER_PASS = "dzd-page";
+        
+        // Anti-autofill: clear on load
+        window.onload = () => { document.getElementById('admin-pass').value = ""; };
+
         function checkAuth() {
             const pass = document.getElementById('admin-pass').value;
             const now = Date.now();
@@ -289,6 +293,7 @@
             loadGlobalStats();
         }
 
+        // Fixed: Profit Calculation logic updated
         async function loadGlobalStats() {
             try {
                 const querySnapshot = await db.collection('orders').get();
@@ -301,7 +306,10 @@
 
                 document.getElementById('stat-total-orders').innerText = totalOrders.toLocaleString();
                 document.getElementById('stat-total-revenue').innerText = `${totalRevenue.toLocaleString()}.00`;
-                document.getElementById('stat-total-profit').innerText = `${(totalRevenue * 0.6).toLocaleString()}.00`;
+                
+                // Profit = 60% of total amount user paid
+                let totalProfit = totalRevenue * 0.60;
+                document.getElementById('stat-total-profit').innerText = `${totalProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             } catch(e) { console.error("Stats Error:", e); }
         }
 
@@ -375,7 +383,6 @@
             renderWallets();
         }
 
-        // --- EXPLORE MODAL LOGIC ---
         async function openExploreModal(userId, email) {
             const modal = document.getElementById('explore-modal');
             const tableBody = document.getElementById('order-history-table');
@@ -401,7 +408,7 @@
                     let html = '';
                     querySnapshot.forEach((doc) => {
                         const o = doc.data();
-                        const numID = o.orderId || doc.id.replace(/\D/g,'').slice(0,8); // Ensures it's a number
+                        const numID = o.orderId || doc.id.replace(/\D/g,'').slice(0,8);
                         
                         html += `
                             <tr class="hover:bg-white/[0.03]">
@@ -426,7 +433,6 @@
             }
         }
 
-        // --- WALLET EDIT LOGIC ---
         function openWalletEditModal(userId, email, total, pending) {
             const modal = document.getElementById('wallet-edit-modal');
             document.getElementById('edit-user-email').innerText = `Editing: ${email}`;
